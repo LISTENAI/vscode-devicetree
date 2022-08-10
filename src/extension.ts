@@ -1,13 +1,8 @@
-import { commands, ExtensionContext, window } from 'vscode';
+import { ExtensionContext, window } from 'vscode';
+import { DeviceTreeProvider } from './DeviceTreeProvider';
 
-export function activate(context: ExtensionContext) {
-  console.log('Congratulations, your extension "devicetree" is now active!');
-
-  const disposable = commands.registerCommand('devicetree.helloWorld', () => {
-    window.showInformationMessage('Hello World from LISA DeviceTree!');
-  });
-
-  context.subscriptions.push(disposable);
+export function activate(_context: ExtensionContext) {
+  window.registerTreeDataProvider('deviceTree', new DeviceTreeProvider());
 }
 
 export function deactivate() {

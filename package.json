@@ -10,16 +10,35 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:devicetree.helloWorld"
+    "onLanguage:deviceTree"
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "commands": [
+    "languages": [
       {
-        "command": "devicetree.helloWorld",
-        "title": "Hello World"
+        "id": "deviceTree",
+        "aliases": [
+          "DeviceTree (LISA)",
+          "devicetree",
+          "dts"
+        ],
+        "extensions": [
+          ".dts",
+          ".dtsi"
+        ],
+        "filenames": [
+          "app.overlay"
+        ]
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "deviceTree",
+          "name": "DeviceTree View"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
