@@ -76,8 +76,10 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@types/bluebird": "^3.5.36",
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^7.2.0",
+    "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^9.1.1",
     "@types/node": "16.x",
     "@types/vscode": "^1.70.0",
@@ -94,7 +96,9 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "bluebird": "^3.7.2",
     "execa": "^6.1.0",
-    "fs-extra": "^10.1.0"
+    "fs-extra": "^10.1.0",
+    "js-yaml": "^4.1.0"
   }
 }
