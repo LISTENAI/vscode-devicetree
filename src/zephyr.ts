@@ -2,8 +2,8 @@ import { commands, ExtensionContext, window, workspace } from 'vscode';
 import { execa } from 'execa';
 import { pathExists, readFile } from 'fs-extra';
 import { getLisaWest, getSdk } from './lisa';
-import { filter } from 'bluebird';
-import { basename, dirname, join, normalize, sep } from 'path';
+import { filter, map } from 'bluebird';
+import { basename, dirname, join, normalize, resolve, sep } from 'path';
 import { promisify } from 'util';
 import { glob as _glob } from 'glob';
 import * as yaml from 'js-yaml';
@@ -13,10 +13,17 @@ const glob = promisify(_glob);
 const conf = workspace.getConfiguration();
 
 export let zephyrRoot: string | undefined;
-export let modules: string[] = [];
+export let modules: Module[] = [];
 export let boards: Record<string, Board> = {};
 
 let westExe: string | undefined;
+
+export interface Module {
+  name: string;
+  path: string;
+  boardRoot: string;
+  dtsRoot: string;
+}
 
 export interface Board {
   identifier: string;
@@ -115,12 +122,34 @@ async function west(...args: string[]): Promise<string | undefined> {
 }
 
 async function loadModules(): Promise<void> {
-  modules = (await west('list', '-f', '{posixpath}'))?.split(/\r?\n/).map(line => line.trim()) || [];
+  const modulePaths = (await west('list', '-f', '{posixpath}'))?.split(/\r?\n/).map(line => line.trim()) || [];
+  modules = await map(modulePaths, async (path) => {
+    const mod = <Module>{
+      name: basename(path),
+      path: path,
+      boardRoot: resolve(path, 'boards'),
+      dtsRoot: resolve(path, 'dts'),
+    };
+
+    const metaPath = join(path, 'zephyr', 'module.yml');
+    if (await pathExists(metaPath)) {
+      const meta = await readYaml<ModuleData>(metaPath);
+      const { settings } = meta.build || {};
+      if (settings?.board_root) {
+        mod.boardRoot = resolve(path, settings?.board_root);
+      }
+      if (settings?.dts_root) {
+        mod.dtsRoot = resolve(path, settings?.dts_root);
+      }
+    }
+
+    return mod;
+  });
   console.log(`Found ${modules.length} modules`);
 }
 
 async function loadBoards(): Promise<void> {
-  const boardRoots = await filter(modules.map((path) => join(path, 'boards')), pathExists);
+  const boardRoots = await filter(modules.map(({ boardRoot }) => boardRoot), pathExists);
   const foundBoards = <Record<string, Board>>{};
   for (const root of boardRoots) {
     for (const dts of await glob('**/*.dts', { cwd: root })) {
@@ -150,5 +179,15 @@ export async function resolveBoard(id: string): Promise<BoardInfo | undefined> {
     return;
   }
 
-  return <BoardInfo>yaml.load(await readFile(metaFile, 'utf-8'), { json: true });
+  return await readYaml(metaFile);
+}
+
+async function readYaml<T>(path: string): Promise<T> {
+  return <T>yaml.load(await readFile(path, 'utf-8'), { json: true });
+}
+
+interface ModuleData {
+  build?: {
+    settings?: Record<string, string>;
+  };
 }
