@@ -15,6 +15,7 @@ const conf = workspace.getConfiguration();
 export let zephyrRoot: string | undefined;
 export let modules: Module[] = [];
 export let boards: Record<string, Board> = {};
+export let bindings: string[] = [];
 
 let westExe: string | undefined;
 
@@ -54,6 +55,7 @@ async function loadEverything(): Promise<void> {
   if (zephyrRoot) {
     await loadModules();
     await loadBoards();
+    await loadBindings();
   }
 }
 
@@ -164,6 +166,18 @@ async function loadBoards(): Promise<void> {
   }
   boards = foundBoards;
   console.log(`Found ${Object.keys(boards).length} boards`);
+}
+
+async function loadBindings(): Promise<void> {
+  const bindingRoots = await filter(modules.map(({ dtsRoot }) => join(dtsRoot, 'bindings')), pathExists);
+  const foundBindings = <string[]>[];
+  for (const root of bindingRoots) {
+    for (const binding of await glob('**/*.yaml', { cwd: root })) {
+      foundBindings.push(join(root, binding));
+    }
+  }
+  bindings = foundBindings;
+  console.log(`Found ${Object.keys(bindings).length} bindings`);
 }
 
 export async function resolveBoard(id: string): Promise<BoardInfo | undefined> {

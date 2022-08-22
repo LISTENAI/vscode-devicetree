@@ -5,10 +5,8 @@
  * SPDX-License-Identifier: MIT
  */
 import * as yaml from 'js-yaml';
-import * as glob from 'glob';
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { readFile } from 'fs';
+import { readFile } from 'fs-extra';
 import { Node } from './dts';
 
 export interface PropertyType {
@@ -468,13 +466,13 @@ const standardTypes = [
 ];
 
 export class TypeLoader {
-  types: { [name: string]: NodeType[] };
-  folders: string[] = [];
-  baseType: NodeType;
+  types: Record<string, NodeType[]> = {};
+  baseType: NodeType = new AbstractNodeType({
+    name: '<unknown>',
+    properties: { ...standardProperties },
+  });
 
   constructor() {
-    this.baseType = new AbstractNodeType({ name: '<unknown>', properties: { ...standardProperties } });
-    this.types = {};
     standardTypes.forEach(type => this.addType(type));
   }
 
@@ -488,25 +486,14 @@ export class TypeLoader {
     type.setLoader(this);
   }
 
-  async addFolder(folder: string) {
-    this.folders.push(folder);
-    const g = glob.sync('**/*.yaml', { cwd: folder, ignore: 'test/*' });
-    return Promise.all(g.map(file => new Promise<void>(resolve => {
-      const filePath = path.resolve(folder, file);
-      readFile(filePath, 'utf-8', (err, out) => {
-        if (err) {
-          console.log(`Couldn't open ${file}`);
-        } else {
-          try {
-            const tree = yaml.load(out, { json: true }) as Object;
-            this.addType(new NodeType({ name: path.basename(file, '.yaml'), ...tree }, filePath));
-          } catch (e) {
-          }
-        }
-
-        resolve();
-      });
-    })));
+  async addFile(file: string): Promise<void> {
+    try {
+      const out = await readFile(file, 'utf-8');
+      const tree = yaml.load(out, { json: true }) as Object;
+      this.addType(new NodeType({ name: path.basename(file, '.yaml'), ...tree }, file));
+    } catch (e) {
+      console.log(`Couldn't open ${file}`);
+    }
   }
 
   get(name: string): NodeType[] {

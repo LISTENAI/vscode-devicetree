@@ -1350,9 +1350,9 @@ export class Parser {
     Object.entries(defines).forEach(([name, value]) => this.defines[name] = new Define(name, value));
 
     zephyr.modules.forEach(m => {
-      this.includes.push(m + '/include');
-      this.includes.push(m + '/dts');
-      this.includes.push(m + '/dts/common');
+      this.includes.push(m.path + '/include');
+      this.includes.push(m.path + '/dts');
+      this.includes.push(m.path + '/dts/common');
     });
   }
 
@@ -1420,7 +1420,7 @@ export class Parser {
     // Board specific includes:
     if (ctx.board?.arch) {
       // Should this be SOC_DIR based?
-      ctx.includes = zephyr.modules.map(module => module + '/dts/' + ctx.board?.arch);
+      ctx.includes = zephyr.modules.map(m => m.path + '/dts/' + ctx.board?.arch);
     }
 
     ctx.parsing = true;
@@ -1461,7 +1461,7 @@ export class Parser {
   }
 
   private async onDidOpen(doc: vscode.TextDocument) {
-    if (doc.uri.scheme !== 'file' || doc.languageId !== 'dts') {
+    if (doc.uri.scheme !== 'file' || doc.languageId !== 'deviceTree') {
       return;
     }
 
@@ -1550,7 +1550,7 @@ export class Parser {
   }
 
   private async onDidChangetextEditor(editor?: vscode.TextEditor) {
-    this.inDTS = editor?.document?.languageId === 'dts';
+    this.inDTS = editor?.document?.languageId === 'deviceTree';
     if (editor && this.inDTS) {
       let uri: vscode.Uri;
       if (editor.document.uri.scheme === 'devicetree') {

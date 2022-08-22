@@ -1,9 +1,10 @@
 import { basename, normalize, sep } from 'path';
 import { Uri } from 'vscode';
+import { Parser } from './dts/dts';
 import { BoardInfo, resolveBoard } from './zephyr';
 
 export default class DTSContext {
-  static async load(uri: Uri): Promise<DTSContext | undefined> {
+  static async load(uri: Uri, parser: Parser): Promise<DTSContext | undefined> {
     const path = normalize(uri.fsPath);
 
     const id = fromBoard(path) || fromOverlay(path);
@@ -18,12 +19,14 @@ export default class DTSContext {
 
     console.log(`Loaded context for board: ${id}`);
 
-    return new DTSContext(board);
+    return new DTSContext(board, parser);
   }
 
   private constructor(
     public readonly board: BoardInfo,
+    public readonly parser: Parser,
   ) {
+    console.log(parser);
   }
 }
 
