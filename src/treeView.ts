@@ -243,9 +243,10 @@ export class DTSTreeView implements
             }
         });
 
-        if (board.children) {
-            return board;
-        }
+        board.addChild(this.rootRefsOverview('chosen', ctx));
+        board.addChild(this.rootRefsOverview('aliases', ctx));
+
+        return board;
     }
 
     private gpioOverview(ctx: DTSCtx) {
@@ -536,6 +537,23 @@ export class DTSTreeView implements
 
         if (adcs.children.length) {
             return adcs;
+        }
+    }
+
+    private rootRefsOverview(type: 'chosen' | 'aliases', ctx: DTSCtx) {
+        const chosens = new TreeInfoItem(ctx, `/${type}`);
+        const entries = ctx.nodes[`/${type}/`]?.entries || [];
+        for (const { properties } of entries) {
+            for (const { name, pHandle } of properties) {
+                if (pHandle && pHandle.kind === 'ref') {
+                    const refItem = new TreeInfoItem(ctx, name, undefined, `= ${pHandle.val}`);
+                    chosens.addChild(refItem);
+                }
+            }
+        }
+
+        if (chosens.children.length) {
+            return chosens;
         }
     }
 
