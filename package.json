@@ -3,6 +3,7 @@
   "displayName": "LISA DeviceTree",
   "description": "DeviceTree language support for LISTENAI Zephyr project",
   "version": "0.0.1",
+  "publisher": "listenai",
   "engines": {
     "vscode": "^1.70.0"
   },
@@ -34,8 +35,8 @@
     "views": {
       "explorer": [
         {
-          "id": "deviceTree",
-          "name": "DeviceTree View"
+          "id": "listenai.devicetree.ctx",
+          "name": "DeviceTree"
         }
       ]
     },

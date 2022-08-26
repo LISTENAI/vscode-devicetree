@@ -58,3 +58,18 @@ export function evaluateExpr(expr: string, _start: vscode.Position) {
     return undefined;
   }
 }
+
+export function sizeString(size: number): string {
+  const spec = [
+    { size: 1024 * 1024 * 1024, name: 'GB' },
+    { size: 1024 * 1024, name: 'MB' },
+    { size: 1024, name: 'kB' },
+    { size: 1, name: 'bytes' },
+  ].find(spec => Math.abs(size) >= spec.size && !(size % spec.size));
+
+  if (size % spec!.size) {
+    return (size / spec!.size).toFixed(3) + ' ' + spec!.name;
+  }
+
+  return (size / spec!.size).toString() + ' ' + spec!.name;
+}

@@ -30,14 +30,7 @@ export interface Board {
   identifier: string;
   arch: string;
   path: string;
-}
-
-export interface BoardInfo {
-  identifier: string;
-  name: string;
-  type: string;
-  arch: string;
-  toolchain: string[];
+  info?: Record<string, any>;
 }
 
 export async function activate(context: ExtensionContext): Promise<void> {
@@ -180,20 +173,28 @@ async function loadBindings(): Promise<void> {
   console.log(`Found ${Object.keys(bindings).length} bindings`);
 }
 
-export async function resolveBoard(id: string): Promise<BoardInfo | undefined> {
-  if (!boards[id]) {
-    console.error(`Board id '${id}' not found`);
-    return;
-  }
-
-  const dtsFile = boards[id].path;
-  const metaFile = join(dirname(dtsFile), `${id}.yaml`);
+export async function resolveBoardInfo(board: Board): Promise<void> {
+  const metaFile = join(dirname(board.path), `${board.identifier}.yaml`);
   if (!(await pathExists(metaFile))) {
-    console.error(`Metadata for board '${id}' not found`);
+    console.error(`Metadata for board '${board.identifier}' not found`);
     return;
   }
 
-  return await readYaml(metaFile);
+  board.info = await readYaml(metaFile);
+}
+
+export async function findIncludes(board?: string): Promise<string[]> {
+  const includeDirs = [
+    'include',
+    'dts',
+    'dts/common',
+  ];
+  if (board && boards[board]) {
+    includeDirs.push(`dts/${boards[board].arch}`);
+  }
+
+  const includes = modules.flatMap((m) => includeDirs.map((p) => resolve(m.path, p)));
+  return await filter(includes, pathExists);
 }
 
 async function readYaml<T>(path: string): Promise<T> {

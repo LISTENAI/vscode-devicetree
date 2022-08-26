@@ -1,41 +1,33 @@
 import { ExtensionContext, TextDocument, TextEditor, window } from 'vscode';
 import * as zephyr from './zephyr';
-import DTSViewProvider from './DTSViewProvider';
-import DTSContext from './DTSContext';
 import { TypeLoader } from './dts/types';
 import { Parser } from './dts/dts';
-
-const viewProvider = new DTSViewProvider();
-
-const types = new TypeLoader();
-const parser = new Parser({}, [], types);
+import { DTSTreeView } from './treeView';
 
 export async function activate(context: ExtensionContext): Promise<void> {
   await zephyr.activate(context);
-  await Promise.all(zephyr.bindings.map(file => types.addFile(file)));
-  await parser.activate(context);
 
-  window.registerTreeDataProvider('deviceTree', viewProvider);
-  context.subscriptions.push(window.onDidChangeActiveTextEditor((e) => onDidChangeActiveTextEditor(e)));
-
-  await Promise.all(window.visibleTextEditors.map((e) => onDidOpen(e.document)));
+  const engine = new DTSEngine();
+  engine.activate(context);
 }
 
 export function deactivate() {
   // Do nothing
 }
 
-async function onDidOpen(doc: TextDocument) {
-  if (doc.uri.scheme === 'file' && doc.languageId === 'deviceTree') {
-    const ctx = await DTSContext.load(doc.uri, parser);
-    if (ctx) {
-      viewProvider.addContext(ctx);
-    }
-  }
-}
+class DTSEngine {
+  parser: Parser;
+  types: TypeLoader;
+  treeView: DTSTreeView;
 
-async function onDidChangeActiveTextEditor(editor?: TextEditor) {
-  if (editor?.document) {
-    onDidOpen(editor.document);
+  constructor() {
+    this.types = new TypeLoader();
+    this.parser = new Parser({}, [], this.types);
+    this.treeView = new DTSTreeView(this.parser);
+  }
+
+  async activate(ctx: ExtensionContext): Promise<void> {
+    await Promise.all(zephyr.bindings.map(file => this.types.addFile(file)));
+    await this.parser.activate(ctx);
   }
 }
