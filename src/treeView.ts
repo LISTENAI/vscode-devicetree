@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { basename } from 'path';
 import { DTSCtx, DTSFile, Node, Parser, PHandle, Property } from './dts/dts';
-import { countText, sizeString } from './dts/util';
+import { addressString, sizeString } from './dts/util';
 import { resolveBoardInfo } from './zephyr';
 import icon from './utils/icon';
 
@@ -109,7 +109,7 @@ export class DTSTreeView implements
                 const item = new vscode.TreeItem(element.name,
                     this.parser.currCtx === element ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed);
                 item.contextValue = 'devicetree.ctx';
-                item.tooltip = 'DeviceTree Context';
+                item.tooltip = '设备树上下文';
                 item.id = ['devicetree', 'ctx', element.name, 'file', file.uri.fsPath.replace(/[/\\]/g, '.')].join('.');
                 item.iconPath = icon('devicetree-inner');
                 return item;
@@ -125,7 +125,7 @@ export class DTSTreeView implements
                 item.id === ['devicetree', 'file', element.ctx.name, element.uri.fsPath.replace(/[/\\]/g, '.')].join('.');
                 if (element.ctx.boardFile === element) {
                     item.iconPath = icon('circuit-board');
-                    item.tooltip = 'Board file';
+                    item.tooltip = '板型文件';
                     item.contextValue = 'devicetree.board';
                 } else {
                     if (element.ctx.overlays.indexOf(element) === element.ctx.overlays.length - 1) {
@@ -135,7 +135,7 @@ export class DTSTreeView implements
                         item.iconPath = icon('shield');
                         item.contextValue = 'devicetree.shield';
                     }
-                    item.tooltip = 'Overlay';
+                    item.tooltip = '概览';
                 }
                 return item;
             }
@@ -206,7 +206,7 @@ export class DTSTreeView implements
     }
 
     private async boardOverview(ctx: DTSCtx) {
-        const board = new TreeInfoItem(ctx, 'Board', 'circuit-board');
+        const board = new TreeInfoItem(ctx, '板型', 'circuit-board');
 
         if (!ctx.board) {
             return;
@@ -220,10 +220,8 @@ export class DTSTreeView implements
         }
 
         Object.entries({
-            name: 'Name:',
-            arch: 'Architecture:',
-            supported: 'Supported features',
-            toolchain: 'Supported toolchains',
+            name: '名称:',
+            arch: '架构:',
         }).forEach(([field, name]) => {
             if (field === 'name') {
                 const model = ctx.root?.property('model')?.string;
@@ -272,12 +270,12 @@ export class DTSTreeView implements
             });
 
             controller.path = n.path;
-            controller.description = n.pins!.length + ' pins';
+            controller.description = n.pins!.length + ' 个引脚';
             controller.tooltip = n.type?.description;
             if (!controller.children.length) {
-                controller.description += ' • Nothing connected';
+                controller.description += ' • 没有连接';
             } else if (controller.children.length < n.pins!.length) {
-                controller.description += ` • ${controller.children.length} in use`;
+                controller.description += ` • ${controller.children.length} 在使用`;
             }
 
             gpio.addChild(controller);
@@ -289,7 +287,7 @@ export class DTSTreeView implements
     }
 
     private flashOverview(ctx: DTSCtx) {
-        const flash = new TreeInfoItem(ctx, 'Flash', 'flash');
+        const flash = new TreeInfoItem(ctx, '存储', 'flash');
         ctx.nodeArray()
             .filter(n => n.parent && n.type!.is('fixed-partitions'))
             .forEach((n, _, all) => {
@@ -314,29 +312,28 @@ export class DTSTreeView implements
                     const start = reg![0].addrs[0].val;
                     const size = reg![0].sizes?.[0]?.val ?? 0;
                     if (start > offset) {
-                        parent.addChild(new TreeInfoItem(ctx, `Free space @ 0x${offset.toString(16)}`, undefined, sizeString(start - offset)));
+                        const space = new TreeInfoItem(ctx, '未使用空间', undefined, `@ ${addressString(offset)}, ${sizeString(start - offset)}`);
+                        parent.addChild(space);
                     }
 
                     const partition = new TreeInfoItem(ctx, c.property('label')?.value?.[0]?.val as string ?? c.uniqueName);
-                    partition.description = sizeString(size);
+                    partition.description = `@ ${addressString(start)}, ${sizeString(size)}`;
                     if (start < offset) {
-                        partition.description += ` - ${sizeString(offset - start)} overlap!`;
+                        partition.description += ` - 有 ${sizeString(offset - start)} 重叠!`;
                     }
-                    partition.tooltip = `0x${start.toString(16)} - 0x${(start + size - 1).toString(16)}`;
+                    partition.tooltip = `${addressString(start)} - ${addressString(start + size - 1)}`;
                     partition.path = c.path;
 
-                    partition.addChild(new TreeInfoItem(ctx, 'Start', undefined, reg![0].addrs[0].toString(true)));
-
-                    if (size) {
-                        partition.addChild(new TreeInfoItem(ctx, 'Size', undefined, sizeString(reg![0].sizes[0].val)));
-                    }
+                    partition.addChild(new TreeInfoItem(ctx, '起始:', undefined, addressString(start, 8)));
+                    partition.addChild(new TreeInfoItem(ctx, '结束:', undefined, addressString(start + size - 1, 8)));
+                    partition.addChild(new TreeInfoItem(ctx, '长度:', undefined, `${size} 字节 (${sizeString(size)})`));
 
                     parent.addChild(partition);
                     offset = start + size;
                 });
 
                 if (capacity !== undefined && offset < capacity) {
-                    parent.addChild(new TreeInfoItem(ctx, `Free space @ 0x${offset.toString(16)}`, undefined, sizeString(capacity - offset)));
+                    parent.addChild(new TreeInfoItem(ctx, '未使用空间', undefined, `@ ${addressString(offset)}, ${sizeString(capacity - offset)}`));
                 }
             });
 
@@ -354,14 +351,18 @@ export class DTSTreeView implements
                 n.regs()?.filter(reg => reg.addrs.length === 1 && reg.sizes.length === 1).forEach((reg, i, areas) => {
                     let area = parent;
                     if (areas.length > 1) {
-                        area = new TreeInfoItem(ctx, `Area ${i + 1}`);
+                        area = new TreeInfoItem(ctx, `分区 ${i + 1}`);
                         parent.addChild(area);
                     }
 
-                    area.description = sizeString(reg.sizes[0].val);
+                    const start = reg.addrs[0].val;
+                    const size = reg.sizes[0].val;
 
-                    area.addChild(new TreeInfoItem(ctx, 'Start', undefined, reg.addrs[0].toString(true)));
-                    area.addChild(new TreeInfoItem(ctx, 'Size', undefined, sizeString(reg.sizes[0].val)));
+                    area.description = `@ ${addressString(start)}, ${sizeString(size)}`;
+
+                    area.addChild(new TreeInfoItem(ctx, '起始:', undefined, addressString(start)));
+                    area.addChild(new TreeInfoItem(ctx, '结束:', undefined, addressString(start + size - 1, 8)));
+                    area.addChild(new TreeInfoItem(ctx, '长度:', undefined, `${size} 字节 (${sizeString(size)})`));
                 });
             });
         }
@@ -373,7 +374,7 @@ export class DTSTreeView implements
 
     private interruptOverview(ctx: DTSCtx) {
         const nodes = ctx.nodeArray();
-        const interrupts = new TreeInfoItem(ctx, 'Interrupts', 'interrupts');
+        const interrupts = new TreeInfoItem(ctx, '中断', 'interrupts');
         const controllers = nodes.filter(n => n.property('interrupt-controller'));
         const controllerItems = controllers.map(n => ({ item: new TreeInfoItem(ctx, n.uniqueName), children: new Array<{ node: Node, interrupts: Property }>() }));
         nodes.filter(n => n.property('interrupts')).forEach(n => {
@@ -411,12 +412,13 @@ export class DTSTreeView implements
                         irq.name += ` (${irqNames?.[i] ?? i})`;
                     }
 
-                    const prioIdx = cells?.indexOf('priority');
-                    if (cellValues?.length > prioIdx) {
-                        irq.description = 'Priority: ' + cellValues[prioIdx]?.toString();
+                    const prio = cellValues[cells?.indexOf('priority')];
+                    if (typeof prio === 'number') {
+                        irq.description = `优先级: ${prio}`;
                     }
 
-                    cells?.forEach((cell, i) => irq.addChild(new TreeInfoItem(ctx, cell.replace(/^\w/, letter => letter.toUpperCase()) + ':', undefined, cellValues?.[i]?.toString() ?? 'N/A')));
+                    cells?.forEach((cell, i) => irq.addChild(new TreeInfoItem(ctx,
+                        `${cell}:`, undefined, cellValues?.[i]?.toString() ?? 'N/A')));
                     controller.item.addChild(irq);
                 });
             });
@@ -440,7 +442,7 @@ export class DTSTreeView implements
     }
 
     private busOverview(ctx: DTSCtx) {
-        const buses = new TreeInfoItem(ctx, 'Buses', 'bus');
+        const buses = new TreeInfoItem(ctx, '总线', 'bus');
         ctx.nodeArray().filter(node => node.type?.bus).forEach(node => {
             const bus = new TreeInfoItem(ctx, node.uniqueName, undefined, '');
             if (!bus.name.toLowerCase().includes(node.type!.bus?.toLowerCase())) {
@@ -457,7 +459,7 @@ export class DTSTreeView implements
                 bus.addChild(infoItem);
             });
 
-            const nodesItem = new TreeInfoItem(ctx, 'Nodes');
+            const nodesItem = new TreeInfoItem(ctx, '节点');
 
             node.children().forEach(child => {
                 const busEntry = new TreeInfoItem(ctx, child.localUniqueName);
@@ -472,7 +474,7 @@ export class DTSTreeView implements
                         const csGpios = node.property('cs-gpios');
                         const cs = csGpios?.entries?.[child.address];
                         if (cs) {
-                            const csEntry = new TreeInfoItem(ctx, `Chip select`);
+                            const csEntry = new TreeInfoItem(ctx, `片选`);
                             csEntry.description = `${cs.target.toString(true)} ${cs.cells.map(c => c.toString(true)).join(' ')}`;
                             csEntry.path = csGpios.path;
                             busEntry.addChild(csEntry);
@@ -484,9 +486,9 @@ export class DTSTreeView implements
             });
 
             if (nodesItem.children.length) {
-                bus.description += `• ${countText(nodesItem.children.length, 'node')}`;
+                bus.description += `• ${nodesItem.children.length} 个节点`;
             } else {
-                nodesItem.description = '• Nothing connected';
+                nodesItem.description = '• 没有连接';
             }
 
             bus.addChild(nodesItem);
@@ -500,7 +502,7 @@ export class DTSTreeView implements
 
     private ioChannelOverview(type: 'ADC' | 'DAC', ctx: DTSCtx) {
         const nodes = ctx.nodeArray();
-        const adcs = new TreeInfoItem(ctx, type + 's', type.toLowerCase());
+        const adcs = new TreeInfoItem(ctx, type, type.toLowerCase());
         nodes.filter(node => node.type?.is(type.toLowerCase() + '-controller')).forEach(node => {
             const controller = new TreeInfoItem(ctx, node.uniqueName);
             controller.path = node.path;
@@ -513,13 +515,13 @@ export class DTSTreeView implements
                 })
                 .sort((a, b) => a.idx - b.idx)
                 .forEach(channel => {
-                    const entry = new TreeInfoItem(ctx, `Channel ${channel.idx}`, undefined, channel.node.uniqueName + (channel.name ? ` • ${channel.name}` : ''));
+                    const entry = new TreeInfoItem(ctx, `通道 ${channel.idx}`, undefined, channel.node.uniqueName + (channel.name ? ` • ${channel.name}` : ''));
                     entry.path = channel.node.path;
                     controller.addChild(entry);
                 });
 
             if (!controller.children.length) {
-                controller.addChild(new TreeInfoItem(ctx, '', undefined, 'No channels in use.'));
+                controller.addChild(new TreeInfoItem(ctx, '', undefined, '没有在使用的通道'));
             }
 
             adcs.addChild(controller);
@@ -537,51 +539,8 @@ export class DTSTreeView implements
         }
     }
 
-    private clockOverview(ctx: DTSCtx) {
-        const nodes = ctx.nodeArray();
-        const clocks = new TreeInfoItem(ctx, 'Clocks', 'clock');
-        nodes.filter(node => node.type?.is('clock-controller')).forEach(node => {
-            const clock = new TreeInfoItem(ctx, node.uniqueName);
-            clock.path = node.path;
-            clock.tooltip = node.type?.description;
-            const cells = node.type?.cells('clock');
-            nodes.forEach(user => {
-                const clockProp = user.property('clocks');
-                const entries = clockProp?.entries?.filter(e => e.target.is(node));
-                entries?.forEach(e => {
-                    const userEntry = new TreeInfoItem(ctx, user.uniqueName);
-                    userEntry.path = user.path;
-                    userEntry.tooltip = user.type?.description;
-                    cells?.forEach((c, i) => {
-                        if (i < e.cells.length) {
-                            userEntry.addChild(new TreeInfoItem(ctx, c, undefined, e.cells[i].toString(true)));
-                        }
-                    });
-                    clock.addChild(userEntry);
-                });
-            });
-
-            if (!clock.children.length) {
-                clock.addChild(new TreeInfoItem(ctx, '', undefined, 'No users'));
-            }
-
-            clocks.addChild(clock);
-        });
-
-        if (clocks.children.length === 1) {
-            clocks.children[0].icon = clocks.icon;
-            clocks.children[0].description = clocks.children[0].name;
-            clocks.children[0].name = clocks.name;
-            return clocks.children[0];
-        }
-
-        if (clocks.children.length) {
-            return clocks;
-        }
-    }
-
     private async getOverviewTree(ctx: DTSCtx): Promise<DTSTreeItem[]> {
-        const details = new TreeInfoItem(ctx, 'Overview');
+        const details = new TreeInfoItem(ctx, '概览');
         details.addChild(await this.boardOverview(ctx));
         details.addChild(this.gpioOverview(ctx));
         details.addChild(this.flashOverview(ctx));
@@ -589,7 +548,6 @@ export class DTSTreeView implements
         details.addChild(this.busOverview(ctx));
         details.addChild(this.ioChannelOverview('ADC', ctx));
         details.addChild(this.ioChannelOverview('DAC', ctx));
-        details.addChild(this.clockOverview(ctx));
 
         if (details.children.length) {
             return [details, ...ctx.files];

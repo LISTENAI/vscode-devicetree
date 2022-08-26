@@ -5,21 +5,6 @@
  */
 import * as vscode from 'vscode';
 
-export function countText(count: number, text: string, plural?: string): string {
-  if (!plural) {
-    plural = text + 's';
-  }
-
-  let out = count.toString() + ' ';
-  if (count === 1) {
-    out += text;
-  } else {
-    out += plural;
-  }
-
-  return out;
-}
-
 export function capitalize(str: string): string {
   return str.replace(/([a-z])(\w+)/g, (word, first: string, rest: string) => {
     const acronyms = [
@@ -63,8 +48,8 @@ export function sizeString(size: number): string {
   const spec = [
     { size: 1024 * 1024 * 1024, name: 'GB' },
     { size: 1024 * 1024, name: 'MB' },
-    { size: 1024, name: 'kB' },
-    { size: 1, name: 'bytes' },
+    { size: 1024, name: 'KB' },
+    { size: 1, name: '字节' },
   ].find(spec => Math.abs(size) >= spec.size && !(size % spec.size));
 
   if (size % spec!.size) {
@@ -72,4 +57,12 @@ export function sizeString(size: number): string {
   }
 
   return (size / spec!.size).toString() + ' ' + spec!.name;
+}
+
+export function addressString(size: number, length?: number): string {
+  let hex = size.toString(16).toUpperCase();
+  if (typeof length === 'number') {
+    hex = hex.padStart(length, '0');
+  }
+  return `0x${hex}`;
 }
