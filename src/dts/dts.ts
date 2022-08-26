@@ -1482,7 +1482,7 @@ export class Parser {
   }
 
   private async onDidOpen(doc: vscode.TextDocument) {
-    if (doc.uri.scheme !== 'file' || doc.languageId !== 'deviceTree') {
+    if (doc.uri.scheme !== 'file' || doc.languageId !== 'dts') {
       return;
     }
 
@@ -1571,7 +1571,7 @@ export class Parser {
   }
 
   private async onDidChangetextEditor(editor?: vscode.TextEditor) {
-    this.inDTS = editor?.document?.languageId === 'deviceTree';
+    this.inDTS = editor?.document?.languageId === 'dts';
     if (editor && this.inDTS) {
       let uri: vscode.Uri;
       if (editor.document.uri.scheme === 'devicetree') {

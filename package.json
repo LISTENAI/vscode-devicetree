@@ -11,27 +11,10 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:deviceTree"
+    "onLanguage:dts"
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "languages": [
-      {
-        "id": "deviceTree",
-        "aliases": [
-          "DeviceTree (LISA)",
-          "devicetree",
-          "dts"
-        ],
-        "extensions": [
-          ".dts",
-          ".dtsi"
-        ],
-        "filenames": [
-          "app.overlay"
-        ]
-      }
-    ],
     "views": {
       "explorer": [
         {
