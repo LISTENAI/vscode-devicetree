@@ -183,6 +183,10 @@ export async function resolveBoardInfo(board: Board): Promise<void> {
   board.info = await readYaml(metaFile);
 }
 
+export function findBoard(id: string): Board | undefined {
+  return boards[id];
+}
+
 export async function findIncludes(board?: string): Promise<string[]> {
   const includeDirs = [
     'include',

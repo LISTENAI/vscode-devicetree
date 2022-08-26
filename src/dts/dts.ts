@@ -1400,6 +1400,20 @@ export class Parser {
     return [...this.appCtx, ...this.boardCtx];
   }
 
+  private async guessOverlayBoard(uri: vscode.Uri): Promise<zephyr.Board | undefined> {
+    const boardName = path.basename(uri.fsPath, '.overlay');
+    // Some generic names are used for .overlay files: These can be ignored.
+    const ignoredNames = ['app', 'dts', 'prj'];
+    let board: zephyr.Board | undefined;
+    if (!ignoredNames.includes(boardName)) {
+      board = zephyr.findBoard(boardName);
+      if (board) {
+        console.log(uri.toString() + ': Using board ' + boardName);
+        return board;
+      }
+    }
+  }
+
   async addContext(board?: vscode.Uri | zephyr.Board, overlays = <vscode.Uri[]>[], name?: string): Promise<DTSCtx | undefined> {
     const ctx = new DTSCtx();
     let boardDoc: vscode.TextDocument | undefined;
@@ -1409,6 +1423,13 @@ export class Parser {
     } else if (board) {
       ctx.board = board;
       boardDoc = await vscode.workspace.openTextDocument(board.path).then(doc => doc, _ => undefined);
+    } else if (overlays.length) {
+      ctx.board = await this.guessOverlayBoard([...overlays].pop()!);
+      if (!ctx.board) {
+        return;
+      }
+
+      boardDoc = await vscode.workspace.openTextDocument(ctx.board.path).then(doc => doc, _ => undefined);
     } else {
       return;
     }
