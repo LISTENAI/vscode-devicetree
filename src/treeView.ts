@@ -563,19 +563,25 @@ export class DTSTreeView implements
     }
 
     private rootRefsOverview(type: 'chosen' | 'aliases', ctx: DTSCtx) {
-        const chosens = new TreeInfoItem(ctx, `/${type}`);
+        const refs = new TreeInfoItem(ctx, `/${type}`);
         const entries = ctx.nodes[`/${type}/`]?.entries || [];
         for (const { properties } of entries) {
-            for (const { name, pHandle } of properties) {
+            for (const { name, pHandle, path } of properties) {
                 if (pHandle && pHandle.kind === 'ref') {
                     const refItem = new TreeInfoItem(ctx, name, undefined, `= ${pHandle.val}`);
-                    chosens.addChild(refItem);
+                    refItem.path = path;
+
+                    const targetItem = new TreeInfoItem(ctx, pHandle.val);
+                    targetItem.path = ctx.getPHandleNode(pHandle.val.substring(1))?.path;
+
+                    refItem.addChild(targetItem);
+                    refs.addChild(refItem);
                 }
             }
         }
 
-        if (chosens.children.length) {
-            return chosens;
+        if (refs.children.length) {
+            return refs;
         }
     }
 
