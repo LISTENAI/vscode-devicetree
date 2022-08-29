@@ -460,6 +460,30 @@ export class DTSTreeView implements
                 bus.addChild(infoItem);
             });
 
+            const pinctrls = node.property('pinctrl-names')?.stringArray;
+            if (pinctrls) {
+                const pinctrlsItem = new TreeInfoItem(ctx, '引脚');
+                for (let i = 0; i < pinctrls.length; i++) {
+                    const pinctrlNode = node.property(`pinctrl-${i}`);
+                    if (pinctrlNode?.pHandles) {
+                        const pinctrlItem = new TreeInfoItem(ctx, pinctrls[i]);
+                        pinctrlItem.path = pinctrlNode.path;
+                        for (const ref of pinctrlNode?.pHandles) {
+                            const refItem = new TreeInfoItem(ctx, ref.val);
+                            const target = ctx.getPHandleNode(ref.val.substring(1));
+                            if (target) {
+                                refItem.path = target.path;
+                            }
+                            pinctrlItem.addChild(refItem);
+                        }
+                        pinctrlsItem.addChild(pinctrlItem);
+                    }
+                }
+                if (pinctrlsItem.children.length) {
+                    bus.addChild(pinctrlsItem);
+                }
+            }
+
             const nodesItem = new TreeInfoItem(ctx, '节点');
 
             node.children().forEach(child => {
