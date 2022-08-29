@@ -7,6 +7,7 @@ import { promisify } from 'util';
 import { glob as _glob } from 'glob';
 import * as yaml from 'js-yaml';
 import { getLisaWest, getSdk } from './utils/lisa';
+import { getCMakeCache } from './utils/cmake';
 
 const glob = promisify(_glob);
 
@@ -83,6 +84,12 @@ async function findWest(): Promise<void> {
 async function findZephyrRoot(): Promise<void> {
   const candidates = [
     async () => conf.get<string>('deviceTree.zephyr'),
+    async () => {
+      const projDir = workspace.workspaceFolders?.[0].uri.fsPath;
+      if (projDir) {
+        return await getCMakeCache(join(projDir, 'build'), 'ZEPHYR_BASE', 'PATH');
+      }
+    },
     async () => process.env['ZEPHYR_BASE'],
     async () => await west('topdir'),
     async () => await west('config', 'zephyr.base'),
