@@ -8,7 +8,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   await zephyr.activate(context);
 
   const engine = new DTSEngine();
-  engine.activate(context);
+  await engine.activate(context);
 }
 
 export function deactivate() {

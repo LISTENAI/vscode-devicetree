@@ -9,6 +9,7 @@ import * as zephyr from '../zephyr';
 import { Define, preprocess, Defines, ProcessedFile } from './preprocessor';
 import { NodeType, TypeLoader } from './types';
 import { ParserState } from './parser';
+import { getCMakeCache } from '../utils/cmake';
 
 abstract class PropertyValue {
   constructor(public val: any, public loc: vscode.Location) {
@@ -1400,36 +1401,48 @@ export class Parser {
     return [...this.appCtx, ...this.boardCtx];
   }
 
-  private async guessOverlayBoard(uri: vscode.Uri): Promise<zephyr.Board | undefined> {
-    const boardName = path.basename(uri.fsPath, '.overlay');
-    // Some generic names are used for .overlay files: These can be ignored.
-    const ignoredNames = ['app', 'dts', 'prj'];
-    let board: zephyr.Board | undefined;
-    if (!ignoredNames.includes(boardName)) {
-      board = zephyr.findBoard(boardName);
-      if (board) {
-        console.log(uri.toString() + ': Using board ' + boardName);
-        return board;
-      }
+  private async guessBoardFromBuild(buildDir: string): Promise<zephyr.Board | undefined> {
+    const boardId = await getCMakeCache(buildDir, 'BOARD', 'STRING');
+    const boardDir = await getCMakeCache(buildDir, 'BOARD_DIR', 'PATH');
+    if (boardId && boardDir) {
+      return {
+        identifier: boardId,
+        path: path.join(boardDir, `${boardId}.dts`),
+        arch: boardDir.match(/boards[/\\]([^./\\]+)/)?.[1]!,
+      };
     }
   }
 
-  async addContext(board?: vscode.Uri | zephyr.Board, overlays = <vscode.Uri[]>[], name?: string): Promise<DTSCtx | undefined> {
+  async addContext(board: vscode.Uri | undefined, overlays: vscode.Uri[] = []): Promise<DTSCtx | undefined> {
     const ctx = new DTSCtx();
     let boardDoc: vscode.TextDocument | undefined;
     if (board instanceof vscode.Uri) {
-      ctx.board = { identifier: path.basename(board.fsPath, path.extname(board.fsPath)), path: board.fsPath, arch: board.fsPath.match(/boards[/\\]([^./\\]+)/)?.[1]! };
-      boardDoc = await vscode.workspace.openTextDocument(board).then(doc => doc, _ => undefined);
-    } else if (board) {
-      ctx.board = board;
-      boardDoc = await vscode.workspace.openTextDocument(board.path).then(doc => doc, _ => undefined);
-    } else if (overlays.length) {
-      ctx.board = await this.guessOverlayBoard([...overlays].pop()!);
+      if (path.basename(board.fsPath) === 'zephyr.dts') {
+        ctx.board = await this.guessBoardFromBuild(path.join(path.dirname(board.fsPath), '..'));
+      } else {
+        ctx.board = {
+          identifier: path.basename(board.fsPath, path.extname(board.fsPath)),
+          path: board.fsPath,
+          arch: board.fsPath.match(/boards[/\\]([^./\\]+)/)?.[1]!,
+        };
+      }
       if (!ctx.board) {
         return;
       }
 
-      boardDoc = await vscode.workspace.openTextDocument(ctx.board.path).then(doc => doc, _ => undefined);
+      boardDoc = await vscode.workspace.openTextDocument(board);
+    } else if (overlays.length) {
+      const overlay = [...overlays].pop()!;
+      if (path.basename(overlay.fsPath) === 'app.overlay') {
+        ctx.board = await this.guessBoardFromBuild(path.join(path.dirname(overlay.fsPath), 'build'));
+      } else {
+        ctx.board = zephyr.findBoard(path.basename(overlay.fsPath, '.overlay'));
+      }
+      if (!ctx.board) {
+        return;
+      }
+
+      boardDoc = await vscode.workspace.openTextDocument(ctx.board.path);
     } else {
       return;
     }
@@ -1451,8 +1464,6 @@ export class Parser {
     if (overlays.length && !ctx.overlays.length) {
       return;
     }
-
-    ctx._name = name;
 
     /* We want to keep the board contexts rid of .dtsi files if we can, as they're not complete.
      * Remove any .dtsi contexts this board file includes:
@@ -1849,7 +1860,6 @@ export class Parser {
     });
     time = process.hrtime(time);
     console.log(`Resolved types for ${file.uri.fsPath} in ${(time[0] * 1e9 + time[1]) / 1000000} ms`);
-    console.log(file);
     return file;
   }
 }
