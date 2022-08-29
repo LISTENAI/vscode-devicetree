@@ -1,12 +1,12 @@
 import { commands, ExtensionContext, window, workspace } from 'vscode';
 import { execa } from 'execa';
 import { pathExists, readFile } from 'fs-extra';
-import { getLisaWest, getSdk } from './lisa';
 import { filter, map } from 'bluebird';
 import { basename, dirname, join, normalize, resolve, sep } from 'path';
 import { promisify } from 'util';
 import { glob as _glob } from 'glob';
 import * as yaml from 'js-yaml';
+import { getLisaWest, getSdk } from './utils/lisa';
 
 const glob = promisify(_glob);
 
