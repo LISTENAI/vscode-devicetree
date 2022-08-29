@@ -15,6 +15,21 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "dts",
+        "aliases": [
+          "DeviceTree",
+          "dts"
+        ],
+        "extensions": [
+          ".dts",
+          ".dtsi",
+          ".overlay"
+        ],
+        "firstLine": "/dts-v1/;"
+      }
+    ],
     "views": {
       "explorer": [
         {
