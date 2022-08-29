@@ -76,7 +76,7 @@ async function findWest(): Promise<void> {
     }
   }
 
-  await window.showErrorMessage('Could not find west', 'Configure west path...');
+  await window.showErrorMessage('找不到 west', '配置 west 路径...');
   commands.executeCommand('workbench.action.openSettings', 'deviceTree.west');
 }
 
@@ -102,7 +102,7 @@ async function findZephyrRoot(): Promise<void> {
     }
   }
 
-  await window.showErrorMessage('Could not find Zephyr root', 'Configure...');
+  await window.showErrorMessage('找不到 Zephyr 目录', '配置...');
   commands.executeCommand('workbench.action.openSettings', 'deviceTree.zephyr');
 }
 
