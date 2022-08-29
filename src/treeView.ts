@@ -488,8 +488,6 @@ export class DTSTreeView implements
 
             if (nodesItem.children.length) {
                 bus.description += `• ${nodesItem.children.length} 个节点`;
-            } else {
-                nodesItem.description = '• 没有连接';
             }
 
             bus.addChild(nodesItem);
