@@ -2,7 +2,7 @@
   "name": "devicetree",
   "displayName": "LISA DeviceTree",
   "description": "DeviceTree language support for LISTENAI Zephyr project",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "listenai",
   "engines": {
     "vscode": "^1.50.0"
