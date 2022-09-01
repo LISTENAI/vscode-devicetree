@@ -9,6 +9,7 @@ import { DTSCtx, DTSFile, Node, Parser, PHandle, Property } from './dts/dts';
 import { addressString, sizeString } from './dts/util';
 import { resolveBoardInfo } from './zephyr';
 import icon from './utils/icon';
+import { parsePinctrl } from './pinctrl';
 
 class TreeInfoItem {
     ctx: DTSCtx;
@@ -444,7 +445,7 @@ export class DTSTreeView implements
 
     private busOverview(ctx: DTSCtx) {
         const buses = new TreeInfoItem(ctx, '总线', 'bus');
-        ctx.nodeArray().filter(node => node.type?.bus).forEach(node => {
+        for (const node of ctx.nodeArray().filter(node => node.type?.bus)) {
             const bus = new TreeInfoItem(ctx, node.uniqueName, undefined, '');
             if (!bus.name.toLowerCase().includes(node.type!.bus?.toLowerCase())) {
                 bus.description = node.type?.bus + ' ';
@@ -473,6 +474,10 @@ export class DTSTreeView implements
                             const target = ctx.getPHandleNode(ref.val.substring(1));
                             if (target) {
                                 refItem.path = target.path;
+                                const pinmux = parsePinctrl(target);
+                                if (pinmux) {
+                                    refItem.description = `= <${pinmux.port} ${pinmux.pin} ${pinmux.func}>`;
+                                }
                             }
                             pinctrlItem.addChild(refItem);
                         }
@@ -516,7 +521,7 @@ export class DTSTreeView implements
 
             bus.addChild(nodesItem);
             buses.addChild(bus);
-        });
+        }
 
         if (buses.children.length) {
             return buses;

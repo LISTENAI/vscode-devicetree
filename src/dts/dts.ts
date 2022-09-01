@@ -1478,6 +1478,8 @@ export class Parser {
       this.boardCtx.push(ctx);
     }
 
+    console.log('Added context', ctx);
+
     this.changeEmitter.fire(ctx);
     return ctx;
   }
