@@ -9,7 +9,8 @@ import { DTSCtx, DTSFile, Node, Parser, PHandle, Property } from './dts/dts';
 import { addressString, sizeString } from './dts/util';
 import { resolveBoardInfo } from './zephyr';
 import icon from './utils/icon';
-import { parsePinctrl } from './pinctrl';
+import { getPinctrls, parsePinctrl, PinMux } from './pinctrl';
+import { sortBy } from 'lodash';
 
 class TreeInfoItem {
     ctx: DTSCtx;
@@ -461,28 +462,25 @@ export class DTSTreeView implements
                 bus.addChild(infoItem);
             });
 
-            const pinctrls = node.property('pinctrl-names')?.stringArray;
+            const pinctrls = getPinctrls(node);
             if (pinctrls) {
                 const pinctrlsItem = new TreeInfoItem(ctx, '引脚');
-                for (let i = 0; i < pinctrls.length; i++) {
-                    const pinctrlNode = node.property(`pinctrl-${i}`);
-                    if (pinctrlNode?.pHandles) {
-                        const pinctrlItem = new TreeInfoItem(ctx, pinctrls[i]);
-                        pinctrlItem.path = pinctrlNode.path;
-                        for (const ref of pinctrlNode?.pHandles) {
-                            const refItem = new TreeInfoItem(ctx, ref.val);
-                            const target = ctx.getPHandleNode(ref.val.substring(1));
-                            if (target) {
-                                refItem.path = target.path;
-                                const pinmux = parsePinctrl(target);
-                                if (pinmux) {
-                                    refItem.description = `= <${pinmux.port} ${pinmux.pin} ${pinmux.func}>`;
-                                }
+                for (const pinctrl of pinctrls) {
+                    const pinctrlItem = new TreeInfoItem(ctx, pinctrl.name);
+                    pinctrlItem.path = pinctrl.path;
+                    for (const ref of pinctrl.refs) {
+                        const refItem = new TreeInfoItem(ctx, ref);
+                        const target = ctx.getPHandleNode(ref.substring(1));
+                        if (target) {
+                            refItem.path = target.path;
+                            const pinmux = parsePinctrl(target);
+                            if (pinmux) {
+                                refItem.description = `= <${pinmux.port} ${pinmux.pin} ${pinmux.func}>`;
                             }
-                            pinctrlItem.addChild(refItem);
                         }
-                        pinctrlsItem.addChild(pinctrlItem);
+                        pinctrlItem.addChild(refItem);
                     }
+                    pinctrlsItem.addChild(pinctrlItem);
                 }
                 if (pinctrlsItem.children.length) {
                     bus.addChild(pinctrlsItem);
@@ -567,6 +565,49 @@ export class DTSTreeView implements
         }
     }
 
+    private pinmuxOverview(ctx: DTSCtx) {
+        const pinmuxes: Record<string, { pinmux: PinMux, node: Node }[]> = {};
+        for (const node of ctx.nodeArray()) {
+            if (!node.refName) {
+                continue;
+            }
+            const pinmux = parsePinctrl(node);
+            if (!pinmux) {
+                continue;
+            }
+            if (!pinmuxes[pinmux.port]) {
+                pinmuxes[pinmux.port] = [];
+            }
+            pinmuxes[pinmux.port].push({ pinmux, node });
+        }
+
+        const pinmuxesItem = new TreeInfoItem(ctx, '引脚复用', '');
+        for (const label of sortBy(Object.keys(pinmuxes))) {
+            const items = pinmuxes[label];
+            const pinmuxItem = new TreeInfoItem(ctx, items[0].pinmux.port);
+            for (const { pinmux, node } of sortBy(items, 'pinmux.pin')) {
+                const pinItem = new TreeInfoItem(ctx, `引脚 ${pinmux.pin}, 功能 ${pinmux.func}`);
+                pinItem.description = node.refName;
+                pinItem.path = node.path;
+                for (const bus of ctx.nodeArray().filter(node => node.type?.bus)) {
+                    for (const { path, refs } of getPinctrls(bus) || []) {
+                        if (refs.includes(node.refName)) {
+                            const busItem = new TreeInfoItem(ctx, bus.refName || bus.path);
+                            busItem.path = path;
+                            pinItem.addChild(busItem);
+                        }
+                    }
+                }
+                pinmuxItem.addChild(pinItem);
+            }
+            pinmuxesItem.addChild(pinmuxItem);
+        }
+
+        if (pinmuxesItem.children.length > 0) {
+            return pinmuxesItem;
+        }
+    }
+
     private rootRefsOverview(type: 'chosen' | 'aliases', ctx: DTSCtx) {
         const refs = new TreeInfoItem(ctx, `/${type}`);
         const entries = ctx.nodes[`/${type}/`]?.entries || [];
@@ -599,6 +640,7 @@ export class DTSTreeView implements
         details.addChild(this.busOverview(ctx));
         details.addChild(this.ioChannelOverview('ADC', ctx));
         details.addChild(this.ioChannelOverview('DAC', ctx));
+        details.addChild(this.pinmuxOverview(ctx));
 
         if (details.children.length) {
             return [details, ...ctx.files];

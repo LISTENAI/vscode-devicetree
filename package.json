@@ -95,9 +95,11 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "@types/lodash": "^4.14.184",
     "bluebird": "^3.7.2",
     "execa": "^6.1.0",
     "fs-extra": "^10.1.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "lodash": "^4.17.21"
   }
 }

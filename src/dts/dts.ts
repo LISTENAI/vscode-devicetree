@@ -1901,3 +1901,11 @@ export function cellName(propname: string) {
 export function getPHandleCells(propname: string, parent: Node | undefined): Property | undefined {
   return parent?.property('#' + cellName(propname));
 }
+
+export function getCompatible(node: Node): string | undefined {
+  return node.parent?.property('compatible')?.string;
+}
+
+export function isCompatible(node: Node, w: string): boolean {
+  return getCompatible(node) === w;
+}

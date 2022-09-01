@@ -1,8 +1,13 @@
-import { basename, resolve } from 'path';
-import { Node } from '../dts/dts';
+import { getCompatible, Node } from '../dts/dts';
 
 export interface PinctrlParser {
   parse(node: Node): PinMux | undefined;
+}
+
+export interface Pinctrl {
+  name: string;
+  path: string;
+  refs: string[];
 }
 
 export interface PinMux {
@@ -13,22 +18,35 @@ export interface PinMux {
 
 import ListenaiCskPinctrl from './listenai,csk-pinctrl';
 
-export function getPinctrlParser(compatible: string): PinctrlParser | undefined {
+export function getPinctrlParser(node: Node): PinctrlParser | undefined {
   return {
     ['listenai,csk-pinctrl']: ListenaiCskPinctrl,
-  }[compatible];
+  }[getCompatible(node) || ''];
 }
 
 export function parsePinctrl(node: Node): PinMux | undefined {
-  const parent = node.parent?.property('compatible')?.string;
-  if (!parent) {
+  return getPinctrlParser(node)?.parse(node);
+}
+
+export function getPinctrls(node: Node): Pinctrl[] | undefined {
+  const pinctrlNames = node.property('pinctrl-names')?.stringArray;
+  if (!pinctrlNames) {
     return;
   }
 
-  const parser = getPinctrlParser(parent);
-  if (!parser) {
-    return;
+  const pinctrls: Pinctrl[] = [];
+  for (let i = 0; i < pinctrlNames.length; i++) {
+    const pinctrlNode = node.property(`pinctrl-${i}`);
+    if (!pinctrlNode?.pHandles) {
+      continue;
+    }
+
+    pinctrls.push({
+      name: pinctrlNames[i],
+      path: pinctrlNode.path,
+      refs: pinctrlNode.pHandles.map((ref) => ref.val),
+    });
   }
 
-  return parser.parse(node);
+  return pinctrls;
 }
