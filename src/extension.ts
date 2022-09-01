@@ -36,7 +36,7 @@ class DTSEngine {
 
       let loc: Location | undefined;
       if (p.endsWith('/')) {
-        loc = ctx?.node(p)?.entries[0]?.nameLoc;
+        loc = [...ctx?.node(p)?.entries || []].pop()?.nameLoc;
       } else {
         loc = ctx?.node(dirname(p))?.property(basename(p))?.loc;
       }
