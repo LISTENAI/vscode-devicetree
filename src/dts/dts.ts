@@ -886,7 +886,6 @@ export class Node {
   address?: number;
   type?: NodeType;
   entries: NodeEntry[];
-  pins?: { prop: Property, cells: IntValue[], pinmux?: Node }[];
 
   constructor(name: string, address?: string, parent?: Node) {
     if (address) {
@@ -1903,7 +1902,7 @@ export function getPHandleCells(propname: string, parent: Node | undefined): Pro
 }
 
 export function getCompatible(node: Node): string | undefined {
-  return node.parent?.property('compatible')?.string;
+  return node.property('compatible')?.string;
 }
 
 export function isCompatible(node: Node, w: string): boolean {

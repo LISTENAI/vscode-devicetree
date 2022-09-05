@@ -8,10 +8,15 @@ export default <PinctrlParser>{
       return;
     }
 
-    const pinmux = pinctrls[0] as PHandle;
+    const pinmux = (pinctrls[0] as PHandle).val;
     const pin = (pinctrls[1] as IntValue).val;
     const func = (pinctrls[2] as IntValue).val;
 
-    return { port: pinmux.val, pin, func };
+    const match = pinmux.match(/^&pinmux(.+)$/);
+    if (!match) {
+      return;
+    }
+
+    return { port: `&gpio${match[1]}`, pin, func };
   }
 };
