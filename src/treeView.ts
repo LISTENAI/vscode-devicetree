@@ -470,7 +470,7 @@ export class DTSTreeView implements
                     pinctrlItem.path = pinctrl.path;
                     for (const ref of pinctrl.refs) {
                         const refItem = new TreeInfoItem(ctx, ref);
-                        const target = ctx.getPHandleNode(ref.substring(1));
+                        const target = ctx.node(ref);
                         if (target) {
                             refItem.path = target.path;
                             const pinmux = parsePinctrl(target);
@@ -610,7 +610,7 @@ export class DTSTreeView implements
 
     private rootRefsOverview(type: 'chosen' | 'aliases', ctx: DTSCtx) {
         const refs = new TreeInfoItem(ctx, `/${type}`);
-        const entries = ctx.nodes[`/${type}/`]?.entries || [];
+        const entries = ctx.node(`/${type}/`)?.entries || [];
         for (const { properties } of entries) {
             for (const { name, pHandle, path } of properties) {
                 if (pHandle && pHandle.kind === 'ref') {
@@ -618,7 +618,7 @@ export class DTSTreeView implements
                     refItem.path = path;
 
                     const targetItem = new TreeInfoItem(ctx, pHandle.val);
-                    targetItem.path = ctx.getPHandleNode(pHandle.val.substring(1))?.path;
+                    targetItem.path = ctx.node(pHandle.val)?.path;
 
                     refItem.addChild(targetItem);
                     refs.addChild(refItem);
