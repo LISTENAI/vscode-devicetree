@@ -20,6 +20,12 @@
         "command": "devicetree.ctx.delete",
         "title": "DeviceTree: 关闭该上下文",
         "icon": "$(trash)"
+      },
+      {
+        "command": "devicetree.getMacro",
+        "title": "DeviceTree: 复制 C 语言引用",
+        "enablement": "editorLangId == dts",
+        "icon": "$(clippy)"
       }
     ],
     "languages": [
@@ -38,6 +44,13 @@
       }
     ],
     "menus": {
+      "editor/context": [
+        {
+          "command": "devicetree.getMacro",
+          "when": "editorLangId == dts",
+          "group": "9_cutcopypaste"
+        }
+      ],
       "view/item/context": [
         {
           "command": "devicetree.ctx.delete",
