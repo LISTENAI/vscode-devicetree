@@ -15,6 +15,13 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "devicetree.ctx.delete",
+        "title": "DeviceTree: 关闭该上下文",
+        "icon": "$(trash)"
+      }
+    ],
     "languages": [
       {
         "id": "dts",
@@ -30,6 +37,14 @@
         "firstLine": "/dts-v1/;"
       }
     ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "devicetree.ctx.delete",
+          "when": "viewItem == devicetree.ctx"
+        }
+      ]
+    },
     "views": {
       "explorer": [
         {

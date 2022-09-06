@@ -2,7 +2,7 @@ import { commands, ExtensionContext, Location, Selection, Uri, window, workspace
 import { basename, dirname } from 'path';
 import * as zephyr from './zephyr';
 import { TypeLoader } from './dts/types';
-import { Parser } from './dts/dts';
+import { DTSCtx, Parser } from './dts/dts';
 import { DTSTreeView } from './treeView';
 
 export async function activate(context: ExtensionContext): Promise<void> {
@@ -30,6 +30,15 @@ class DTSEngine {
   async activate(ctx: ExtensionContext): Promise<void> {
     await Promise.all(zephyr.bindings.map(file => this.types.addFile(file)));
     await this.parser.activate(ctx);
+
+    commands.registerCommand('devicetree.ctx.delete', (ctx?: DTSCtx) => {
+      ctx = ctx ?? this.parser.currCtx;
+      if (!ctx || !(ctx instanceof DTSCtx)) {
+        return;
+      }
+
+      this.parser.removeCtx(ctx);
+    });
 
     commands.registerCommand('devicetree.goto', async (p: string, uri?: Uri) => {
       const ctx = uri ? this.parser.ctx(uri) : this.parser.currCtx;
