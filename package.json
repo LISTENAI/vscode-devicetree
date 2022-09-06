@@ -107,6 +107,7 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^7.2.0",
     "@types/js-yaml": "^4.0.5",
+    "@types/lodash": "^4.14.184",
     "@types/mocha": "^9.1.1",
     "@types/node": "16.x",
     "@types/vscode": "^1.50.0",
@@ -123,7 +124,6 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
-    "@types/lodash": "^4.14.184",
     "bluebird": "^3.7.2",
     "execa": "^6.1.0",
     "fs-extra": "^10.1.0",
