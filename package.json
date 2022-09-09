@@ -1,5 +1,5 @@
 {
-  "name": "devicetree",
+  "name": "lisa-devicetree",
   "displayName": "LISA DeviceTree",
   "description": "DeviceTree language support for LISTENAI Zephyr project",
   "version": "0.2.0",
