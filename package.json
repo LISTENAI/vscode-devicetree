@@ -1,9 +1,10 @@
 {
-  "name": "lisa-devicetree",
-  "displayName": "LISA DeviceTree",
+  "name": "csk-devicetree",
+  "displayName": "CSK DeviceTree",
   "description": "DeviceTree language support for LISTENAI Zephyr project",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "listenai",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.50.0"
   },
