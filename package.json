@@ -2,7 +2,7 @@
   "name": "csk-devicetree",
   "displayName": "CSK DeviceTree",
   "description": "DeviceTree language support for LISTENAI Zephyr project",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "listenai",
   "icon": "icon.png",
   "engines": {
